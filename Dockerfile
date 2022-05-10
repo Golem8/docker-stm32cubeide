@@ -1,25 +1,25 @@
 FROM ubuntu:18.04
+LABEL Name=utatdocker Version=0.0.1
 
-MAINTAINER Xander Hendriks <xander.hendriks@nx-solutions.com>
+RUN apt-get -y update && apt-get -y install make unzip expect
+RUN apt-get -y install git
+# copy installer.sh.zip into opt
+COPY installer.sh.zip /opt/
+#unzip it into same directory
+RUN unzip /opt/installer.sh.zip -d /opt
+#rename it into something easier
+RUN mv /opt/st-stm32cubeide_1.8.0_11526_20211125_0815_amd64.deb_bundle.sh /opt/stm32cubeide-installer.sh
 
-ENV STM32CUBEIDE_VERSION 1.7.0
+COPY autoinstall.sh /opt/
+RUN ["chmod", "+x", "/opt/stm32cubeide-installer.sh"]
+RUN ["chmod", "+x", "/opt/autoinstall.sh"]
 
-ENV PATH="${PATH}:/opt/st/stm32cubeide_${STM32CUBEIDE_VERSION}"
+#run installer that autofills answers
+RUN /opt/autoinstall.sh
 
-RUN apt-get -y update && \
-	apt-get -y install zip curl expect
+#clean up installers
+RUN ["rm",  "/opt/autoinstall.sh", "/opt/stm32cubeide-installer.sh", "/opt/installer.sh.zip"]
 
-# Download and install STM32 Cube IDE
-# Downloaded from test.nx-solutions.com
-RUN curl --insecure -o /tmp/stm32cubeide-installer.sh.zip "https://test.nx-solutions.com/en.st-stm32cubeide_1.7.0_10852_20210715_0634_amd64.deb_bundle.sh_v1.7.0.zip" && \
-    unzip -p /tmp/stm32cubeide-installer.sh.zip > /tmp/stm32cubeide-installer.sh && rm /tmp/stm32cubeide-installer.sh.zip
-
-COPY noninteractive-install.sh .
-
-# Using expect to install STM32 Cube IDE automatically.
-RUN chmod +x noninteractive-install.sh /tmp/stm32cubeide-installer.sh && \
-    ./noninteractive-install.sh && \
-    rm /tmp/stm32cubeide-installer.sh noninteractive-install.sh
-
-# Install dependencies
-RUN apt-get -y -f install
+# make sure everything was fetched properly
+RUN apt-get update --fix-missing
+RUN ["git", "clone", "https://github.com/spacesys-finch/Firmware.git"]
